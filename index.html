@@ -1,0 +1,468 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Delivery Board</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=DM+Sans:wght@400;500;700&display=swap">
+<style>
+:root{
+  --canvas:#F7F8FA; --card:#FFFFFF; --line:#E5E7EB; --line-soft:#EFF1F4;
+  --ink:#111827; --ink-2:#6B7280; --ink-3:#9AA3AF;
+  --sky:#0EA5E9; --sky-dark:#0284C7; --sky-wash:#E8F6FE;
+  --good:#22C55E; --warn:#F59E0B; --bad:#EF4444; --idle:#C4CBD4;
+  --display:'Outfit',ui-sans-serif,system-ui,sans-serif;
+  --body:'DM Sans',ui-sans-serif,system-ui,sans-serif;
+  --r-card:14px; --r-sm:10px; --r-xs:7px;
+  --shadow:0 1px 3px rgba(16,24,40,.05);
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --canvas:#0B1017; --card:#141B24; --line:#242E3A; --line-soft:#1C242E;
+  --ink:#F3F5F7; --ink-2:#98A3B0; --ink-3:#6C7785;
+  --sky:#38BDF8; --sky-dark:#7DD3FC; --sky-wash:#0F2A3A;
+  --good:#4ADE80; --warn:#FBBF24; --bad:#F87171; --idle:#39444F;
+  --shadow:0 1px 3px rgba(0,0,0,.4); color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --canvas:#0B1017; --card:#141B24; --line:#242E3A; --line-soft:#1C242E;
+  --ink:#F3F5F7; --ink-2:#98A3B0; --ink-3:#6C7785;
+  --sky:#38BDF8; --sky-dark:#7DD3FC; --sky-wash:#0F2A3A;
+  --good:#4ADE80; --warn:#FBBF24; --bad:#F87171; --idle:#39444F;
+  --shadow:0 1px 3px rgba(0,0,0,.4); color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--canvas);color:var(--ink);font-family:var(--body);margin:0;
+  padding-inline:16px;padding-block:28px 56px;line-height:1.5;font-size:14px;
+  -webkit-font-smoothing:antialiased}
+.wrap{max-width:1080px;margin:0 auto;display:flex;flex-direction:column;gap:22px}
+h1{font-family:var(--display);font-size:clamp(24px,4vw,32px);font-weight:600;
+  letter-spacing:-.02em;margin:0;text-wrap:balance}
+.sub{color:var(--ink-2);font-size:14px;margin:6px 0 0}
+.sub a{color:var(--ink-2)}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.92em}
+.eyebrow{font-size:11px;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--ink-3);font-weight:500;margin:0 0 14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r-card);
+  padding:20px;box-shadow:var(--shadow);min-width:0}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:22px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:var(--r-card);
+  padding:16px 18px;box-shadow:var(--shadow)}
+.stat .n{font-family:var(--display);font-size:34px;font-weight:600;line-height:1.05;
+  font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.stat .l{font-size:12.5px;color:var(--ink-2);margin-top:4px}
+.stat.accent .n{color:var(--sky)}
+.bar{display:flex;height:34px;border-radius:var(--r-sm);overflow:hidden;gap:2px}
+.bar span{display:flex;align-items:center;justify-content:center;font-size:12px;
+  font-weight:600;color:#fff;font-variant-numeric:tabular-nums;min-width:0}
+.legend{display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:14px;font-size:13px}
+.legend div{display:flex;align-items:center;gap:7px;color:var(--ink-2)}
+.dot{width:9px;height:9px;border-radius:3px;flex:none}
+.legend b{color:var(--ink);font-variant-numeric:tabular-nums;font-weight:600}
+.rows{display:flex;flex-direction:column;gap:11px}
+.row{display:grid;grid-template-columns:110px 1fr 44px;align-items:center;gap:12px;font-size:13.5px}
+.row .k{color:var(--ink-2);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.track{background:var(--line-soft);border-radius:var(--r-xs);height:16px;overflow:hidden;display:flex}
+.track i{display:block;height:100%}
+.row .v{text-align:right;font-variant-numeric:tabular-nums;font-weight:600;font-size:13px}
+svg{display:block;width:100%;height:auto}
+.note{font-size:12.5px;color:var(--ink-3);margin:12px 0 0}
+ul.list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+ul.list li{border-top:1px solid var(--line-soft);padding:11px 0;color:var(--ink-2)}
+ul.list li:first-child{border-top:0;padding-top:2px}
+a.iss{display:flex;gap:10px;align-items:baseline;color:var(--ink);text-decoration:none}
+a.iss:hover .t{color:var(--sky-dark);text-decoration:underline}
+a.iss:focus-visible{outline:2px solid var(--sky);outline-offset:3px;border-radius:var(--r-xs)}
+.num{font-family:var(--display);font-variant-numeric:tabular-nums;color:var(--ink-3);
+  font-size:13px;flex:none;width:52px}
+.t{font-size:14px;min-width:0}
+.meta{display:flex;gap:6px;flex-wrap:wrap;margin-top:5px;margin-left:62px}
+.tag{font-size:10.5px;letter-spacing:.04em;text-transform:uppercase;font-weight:600;
+  padding:2px 7px;border-radius:999px;border:1px solid transparent}
+.tag.hi{color:var(--bad);border-color:var(--bad)}
+.tag.bug{color:var(--warn);border-color:var(--warn)}
+.tag.sec{color:var(--sky-dark);border-color:var(--sky)}
+.tag.age{color:var(--ink-3);border-color:var(--line)}
+footer{color:var(--ink-3);font-size:12.5px;text-align:center;margin-top:8px}
+footer a{color:var(--ink-2)}
+form{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+input[type=text]{flex:1 1 240px;min-width:0;font:inherit;padding:10px 13px;border-radius:var(--r-sm);
+  border:1px solid var(--line);background:var(--canvas);color:var(--ink)}
+input[type=text]:focus-visible{outline:2px solid var(--sky);outline-offset:1px}
+button{font:inherit;font-weight:600;padding:10px 18px;border-radius:var(--r-sm);border:0;
+  background:var(--sky);color:#fff;cursor:pointer}
+button:hover{background:var(--sky-dark)}
+pre{background:var(--canvas);border:1px solid var(--line);border-radius:var(--r-sm);
+  padding:12px;overflow-x:auto;font-size:12.5px;margin:12px 0 0}
+.err{border-color:var(--bad)}
+.err .eyebrow{color:var(--bad)}
+@media (max-width:420px){.row{grid-template-columns:84px 1fr 36px}.meta{margin-left:0}}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<!--BOARD_DATA-->
+
+<script>
+/* Delivery Board — a live GitHub issue dashboard in one static file.
+   No build, no backend, no dependencies: it reads the public Issues API
+   from the browser. Point it at a repo with ?repo=owner/name. */
+
+const SOURCE = 'https://github.com/nch3ng/delivery-board';
+const API = 'https://api.github.com';
+const MAX_PAGES = 10;        // ponytail: 1000 most recent issues; raise it if you outgrow that
+const CACHE_MINUTES = 10;    // ponytail: keeps an embedded board off the 60 req/hr anon limit
+const WEEKS = 19;
+
+const P = new URLSearchParams(location.search);
+const REPO = (P.get('repo') || '')
+  .trim()
+  .replace(/^https?:\/\/(www\.)?github\.com\//, '')
+  .replace(/\.git$/, '')
+  .replace(/^\/+|\/+$/g, '');
+
+// Every bucket is a comma-separated label list, overridable per repo via the URL.
+const labels = (key, fallback) => (P.get(key) ?? fallback)
+  .toLowerCase().split(',').map(s => s.trim()).filter(Boolean);
+const L = {
+  flight:  labels('flight',  'in progress,in-progress,wip,claimed,agent-claimed'),
+  blocked: labels('blocked', 'blocked,on hold'),
+  ready:   labels('ready',   'ready,agent-ready,good first issue,help wanted'),
+  later:   labels('later',   'later,backlog,icebox,wontfix'),
+  triage:  labels('triage',  'triage,needs triage,needs-triage,agent-proposed'),
+};
+const ORDER = ['Needs triage', 'Ready', 'In flight', 'Blocked', 'Later', 'Unlabelled'];
+const COLOR = {'Needs triage':'--warn','Ready':'--sky','In flight':'--good',
+               'Blocked':'--bad','Later':'--idle','Unlabelled':'--ink-3'};
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const days = (iso) => Math.floor((Date.now() - Date.parse(iso)) / 86400000);
+
+/* ---------- data ---------- */
+
+async function load(repo) {
+  const key = 'db:' + repo + ':' + MAX_PAGES;
+  try {
+    const hit = JSON.parse(localStorage.getItem(key) || 'null');
+    if (hit && Date.now() - hit.at < CACHE_MINUTES * 60000) return hit;
+  } catch (e) { /* private mode, no cache */ }
+
+  const issues = [];
+  let truncated = false;
+  for (let page = 1; page <= MAX_PAGES; page++) {
+    const url = `${API}/repos/${repo}/issues?state=all&per_page=100&page=${page}&sort=created&direction=desc`;
+    const res = await fetch(url, {headers: {Accept: 'application/vnd.github+json'}});
+    if (!res.ok) throw await describe(res, repo);
+    const batch = await res.json();
+    issues.push(...batch.filter(i => !i.pull_request));  // the endpoint returns PRs too
+    if (batch.length < 100) break;
+    if (page === MAX_PAGES) truncated = true;
+  }
+
+  const data = {at: Date.now(), repo, truncated, issues: issues.map(i => ({
+    n: i.number, title: i.title, state: i.state,
+    created: i.created_at, closed: i.closed_at,
+    assigned: !!i.assignee,
+    labels: i.labels.map(l => typeof l === 'string' ? l : l.name),
+  }))};
+  try { localStorage.setItem(key, JSON.stringify(data)); } catch (e) {}
+  return data;
+}
+
+async function describe(res, repo) {
+  if (res.status === 404) return new Error(`No public repo called ${repo}. Private repos need a token, which a static page cannot keep secret.`);
+  if (res.status === 403 || res.status === 429) {
+    const reset = Number(res.headers.get('x-ratelimit-reset')) * 1000;
+    const when = reset ? new Date(reset).toLocaleTimeString() : 'shortly';
+    return new Error(`GitHub rate-limited this browser (60 requests an hour for anonymous callers). It resets around ${when}.`);
+  }
+  return new Error(`GitHub returned ${res.status} for ${repo}.`);
+}
+
+function bucket(i) {
+  if (i.state === 'closed') return null;
+  const has = (set) => i.labels.some(n => set.includes(n.toLowerCase()));
+  if (i.assigned || has(L.flight)) return 'In flight';
+  if (has(L.blocked)) return 'Blocked';
+  if (has(L.ready)) return 'Ready';
+  if (has(L.later)) return 'Later';
+  if (!i.labels.length) return 'Unlabelled';
+  return 'Needs triage';
+}
+
+const mondayOf = (d) => {
+  const t = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+  t.setUTCDate(t.getUTCDate() - ((t.getUTCDay() + 6) % 7));
+  return t;
+};
+
+function summarise(issues) {
+  const open = issues.filter(i => i.state === 'open');
+  const closed = issues.filter(i => i.state === 'closed');
+
+  const counts = Object.fromEntries(ORDER.map(k => [k, 0]));
+  open.forEach(i => counts[bucket(i)]++);
+
+  const age = [{k:'0–7d',lo:0,hi:7},{k:'8–30d',lo:8,hi:30},{k:'31–90d',lo:31,hi:90},{k:'90d+',lo:91,hi:1e9}]
+    .map(b => ({k: b.k, n: open.filter(i => {const d = days(i.created); return d >= b.lo && d <= b.hi;}).length}));
+
+  const weekly = [];
+  const start = mondayOf(new Date());
+  for (let w = WEEKS - 1; w >= 0; w--) {
+    const from = new Date(start); from.setUTCDate(from.getUTCDate() - w * 7);
+    const to = new Date(from); to.setUTCDate(to.getUTCDate() + 7);
+    weekly.push({w: from, n: closed.filter(i => i.closed &&
+      Date.parse(i.closed) >= from && Date.parse(i.closed) < to).length});
+  }
+
+  const tally = {};
+  open.forEach(i => new Set(i.labels).forEach(name => {
+    const t = tally[name] || (tally[name] = {k: name, n: 0, ready: 0});
+    t.n++; if (bucket(i) === 'Ready') t.ready++;
+  }));
+  const top = Object.values(tally).sort((a, b) => b.n - a.n).slice(0, 6);
+
+  const rank = (i) => (tag(i, 'hi') ? 0 : tag(i, 'bug') ? 1 : 2);
+  const ready = open.filter(i => bucket(i) === 'Ready')
+    .sort((a, b) => rank(a) - rank(b) || days(b.created) - days(a.created)).slice(0, 10);
+  const flight = open.filter(i => bucket(i) === 'In flight')
+    .sort((a, b) => days(b.created) - days(a.created)).slice(0, 10);
+
+  return {open: open.length, closed: closed.length, counts, age, weekly, top, ready, flight};
+}
+
+const PATTERNS = {
+  hi: /^(p0|p1|critical|urgent|high|priority:?\s*(high|critical))\b/i,
+  bug: /\b(bug|defect|regression)\b/i,
+  sec: /\b(sec|security|vuln\w*)\b/i,
+};
+const tag = (i, kind) => i.labels.some(n => PATTERNS[kind].test(n)) ||
+  (kind !== 'sec' && PATTERNS[kind].test(i.title.replace(/[\[\]]/g, ' ').trim()));
+
+/* ---------- views ---------- */
+
+function chrome(body) {
+  $('app').innerHTML = body;
+  resized();
+}
+
+function landing(message) {
+  chrome(`
+  <header>
+    <h1>Delivery Board</h1>
+    <p class="sub">A live delivery dashboard for any public GitHub repo. One static file, no backend, no API key — embed it anywhere.</p>
+  </header>
+  ${message ? `<section class="card err"><p class="eyebrow">Could not load</p><p style="margin:0">${esc(message)}</p></section>` : ''}
+  <section class="card">
+    <p class="eyebrow">Pick a repository</p>
+    <form id="pick">
+      <input type="text" id="repo" placeholder="owner/name" aria-label="GitHub repository"
+             value="${esc(REPO)}" autocomplete="off" spellcheck="false">
+      <button type="submit">Build the board</button>
+    </form>
+    <div id="snippet"></div>
+  </section>
+  <footer>Open source — <a href="${SOURCE}" target="_blank" rel="noopener">source and docs on GitHub</a></footer>`);
+
+  $('pick').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const v = $('repo').value.trim().replace(/^https?:\/\/(www\.)?github\.com\//, '').replace(/^\/+|\/+$/g, '');
+    if (!/^[\w.-]+\/[\w.-]+$/.test(v)) { $('snippet').innerHTML = '<p class="note">Enter it as <code>owner/name</code>.</p>'; return; }
+    location.search = '?repo=' + encodeURIComponent(v);
+  });
+
+  if (REPO) showSnippet(REPO);
+}
+
+function showSnippet(repo) {
+  const url = location.origin + location.pathname + '?repo=' + encodeURIComponent(repo);
+  $('snippet').innerHTML = `<p class="note">Embed it:</p><pre>${esc(
+    `<iframe src="${url}" title="${repo} delivery board"\n        style="width:100%;height:1600px;border:0" loading="lazy"></iframe>`)}</pre>`;
+}
+
+function board(repo, d, truncated, live, at) {
+  const link = (n) => `https://github.com/${repo}/issues/${n}`;
+  const pipe = ORDER.map(k => ({k, n: d.counts[k]})).filter(p => p.n > 0);
+  const ageMax = Math.max(1, ...d.age.map(a => a.n));
+  const topMax = Math.max(1, ...d.top.map(a => a.n));
+  const stale = d.age[3].n;
+
+  const li = (i) => `<li><a class="iss" href="${link(i.n)}" target="_blank" rel="noopener">
+      <span class="num">#${i.n}</span><span class="t">${esc(i.title)}</span></a>
+    <div class="meta">${[
+      tag(i, 'hi') ? '<span class="tag hi">high</span>' : '',
+      tag(i, 'bug') ? '<span class="tag bug">bug</span>' : '',
+      tag(i, 'sec') ? '<span class="tag sec">security</span>' : '',
+      `<span class="tag age">${days(i.created)}d open</span>`,
+    ].join('')}</div></li>`;
+
+  chrome(`
+  <header>
+    <h1>${esc(repo.split('/')[1])} Delivery Board</h1>
+    <p class="sub">Every open and closed issue in
+      <a href="https://github.com/${esc(repo)}" target="_blank" rel="noopener"><code>${esc(repo)}</code></a>,
+      read ${live ? 'live from GitHub' : 'straight from GitHub'}.
+      ${live ? 'Loaded' : 'Snapshot taken'} ${new Date(at).toLocaleString(undefined, {month:'long', day:'numeric', hour:'numeric', minute:'2-digit'})}.</p>
+  </header>
+
+  <section class="stats">${[
+    ['Open issues', d.open, ''],
+    ['Ready to dispatch', d.counts['Ready'], 'accent'],
+    ['In flight now', d.counts['In flight'], ''],
+    ['Closed to date', d.closed + (truncated ? '+' : ''), ''],
+  ].map(([l, n, c]) => `<div class="stat ${c}"><div class="n">${n}</div><div class="l">${l}</div></div>`).join('')}</section>
+
+  <div class="grid2">
+    <section class="card">
+      <p class="eyebrow">Pipeline</p>
+      <div class="bar">${pipe.map(p => {
+        const pct = p.n / d.open * 100;
+        return `<span style="flex:0 0 ${pct.toFixed(2)}%;background:var(${COLOR[p.k]})" title="${p.k}: ${p.n}">${pct >= 6 ? p.n : ''}</span>`;
+      }).join('')}</div>
+      <div class="legend">${pipe.map(p =>
+        `<div><i class="dot" style="background:var(${COLOR[p.k]})"></i>${p.k} <b>${p.n}</b></div>`).join('')}</div>
+      <p class="note">Buckets come from your own labels, first match wins; anything with an assignee counts as in flight. Override the label names with URL parameters.</p>
+    </section>
+
+    <section class="card">
+      <p class="eyebrow">How long open issues have waited</p>
+      <div class="rows">${d.age.map(a => {
+        const col = a.k === '90d+' ? '--bad' : a.k === '31–90d' ? '--warn' : '--sky';
+        return `<div class="row"><div class="k">${a.k}</div>
+          <div class="track"><i style="width:${(a.n / ageMax * 100).toFixed(1)}%;background:var(${col})"></i></div>
+          <div class="v">${a.n}</div></div>`;
+      }).join('')}</div>
+      <p class="note">${stale
+        ? `${stale} issue${stale > 1 ? 's have' : ' has'} been open more than 90 days.`
+        : 'Nothing has been waiting more than 90 days.'}</p>
+    </section>
+  </div>
+
+  <section class="card">
+    <p class="eyebrow">Issues closed per week</p>
+    <div>${chart(d.weekly)}</div>
+    <p class="note">Weeks start Monday. The final bar is the current week, still in progress.</p>
+  </section>
+
+  ${d.top.length ? `<section class="card">
+    <p class="eyebrow">Where the open work sits</p>
+    <div class="rows">${d.top.map(a => `<div class="row"><div class="k" title="${esc(a.k)}">${esc(a.k)}</div>
+      <div class="track"><i style="width:${(a.ready / topMax * 100).toFixed(1)}%;background:var(--sky)"></i><i style="width:${((a.n - a.ready) / topMax * 100).toFixed(1)}%;background:var(--sky-wash)"></i></div>
+      <div class="v">${a.n}</div></div>`).join('')}</div>
+    <p class="note">The six most-used labels on open issues. The solid part is already ready to dispatch; the lighter remainder is not.</p>
+  </section>` : ''}
+
+  <div class="grid2">
+    <section class="card">
+      <p class="eyebrow">In flight (${d.counts['In flight']})</p>
+      <ul class="list">${d.flight.map(li).join('') || '<li>Nothing claimed right now.</li>'}</ul>
+    </section>
+    <section class="card">
+      <p class="eyebrow">Next up — dispatchable now</p>
+      <ul class="list">${d.ready.map(li).join('') || '<li>Nothing is labelled ready.</li>'}</ul>
+      <p class="note">Highest priority first, then bugs, then whatever has waited longest.</p>
+    </section>
+  </div>
+
+  <footer>${truncated ? `Showing the ${MAX_PAGES * 100} most recent issues. ` : ''}${live
+      ? `Live from the GitHub API, cached ${CACHE_MINUTES} minutes`
+      : 'Static snapshot — rebuild it with the CLI'} —
+    built with <a href="${SOURCE}" target="_blank" rel="noopener">Delivery Board</a></footer>`);
+}
+
+function chart(weekly) {
+  const w = 720, h = 210, ml = 36, mr = 8, mt = 14, mb = 30;
+  const pw = w - ml - mr, ph = h - mt - mb;
+  const peak = Math.max(...weekly.map(d => d.n));
+  const top = Math.ceil(peak / 25) * 25 || 25;
+  const step = pw / weekly.length, bw = Math.max(6, step - 6);
+  const y = (v) => mt + ph - (v / top) * ph;
+
+  let s = `<svg viewBox="0 0 ${w} ${h}" role="img" aria-label="Issues closed per week, peaking at ${peak}">`;
+  s += [0, top / 2, top].map(t => `<line x1="${ml}" y1="${y(t).toFixed(1)}" x2="${w - mr}" y2="${y(t).toFixed(1)}" stroke="var(--line)" stroke-width="1"/>
+    <text x="${ml - 8}" y="${(y(t) + 4).toFixed(1)}" text-anchor="end" font-size="11" fill="var(--ink-3)">${t}</text>`).join('');
+
+  weekly.forEach((d, i) => {
+    const last = i === weekly.length - 1;
+    const bh = d.n === 0 ? 0 : Math.max(2, ph - (y(d.n) - mt));
+    const x = ml + i * step + (step - bw) / 2;
+    if (bh > 0) s += `<rect x="${x.toFixed(1)}" y="${(mt + ph - bh).toFixed(1)}" width="${bw.toFixed(1)}" height="${bh.toFixed(1)}" rx="3" fill="var(${last ? '--sky-wash' : '--sky'})"${last ? ' stroke="var(--sky)" stroke-width="1"' : ''}/>`;
+    if (d.n >= top * 0.35 || (last && d.n > 0))
+      s += `<text x="${(x + bw / 2).toFixed(1)}" y="${(mt + ph - bh - 5).toFixed(1)}" text-anchor="middle" font-size="11" font-weight="600" fill="var(--ink-2)">${d.n}</text>`;
+    if (d.w.getUTCDate() <= 7)
+      s += `<text x="${(x + bw / 2).toFixed(1)}" y="${h - 10}" text-anchor="middle" font-size="11" fill="var(--ink-3)">${d.w.toLocaleDateString('en', {month:'short', timeZone:'UTC'})}</text>`;
+  });
+  return s + `<line x1="${ml}" y1="${mt + ph}" x2="${w - mr}" y2="${mt + ph}" stroke="var(--ink-3)" stroke-width="1"/></svg>`;
+}
+
+/* Let a host page size the iframe instead of guessing. */
+function resized() {
+  if (parent === window) return;
+  try { parent.postMessage({deliveryBoard: 'height', height: document.documentElement.scrollHeight}, '*'); } catch (e) {}
+}
+addEventListener('resize', resized);
+
+/* ---------- self check: open index.html?selftest=1 ---------- */
+
+function selftest() {
+  const out = [];
+  const ok = (name, cond) => out.push([name, !!cond]);
+  const iso = (d) => new Date(Date.now() - d * 86400000).toISOString();
+  const mk = (o) => Object.assign({n: 1, title: 't', state: 'open', created: iso(1),
+    closed: null, assigned: false, labels: []}, o);
+
+  ok('assignee wins over labels', bucket(mk({assigned: true, labels: ['ready']})) === 'In flight');
+  ok('blocked beats ready', bucket(mk({labels: ['ready', 'blocked']})) === 'Blocked');
+  ok('ready label reads', bucket(mk({labels: ['agent-ready']})) === 'Ready');
+  ok('no labels is unlabelled', bucket(mk({})) === 'Unlabelled');
+  ok('unknown label is triage', bucket(mk({labels: ['area:web']})) === 'Needs triage');
+  ok('closed has no bucket', bucket(mk({state: 'closed'})) === null);
+  ok('label match ignores case', bucket(mk({labels: ['Good First Issue']})) === 'Ready');
+
+  const d = summarise([
+    mk({n: 1, created: iso(3)}), mk({n: 2, created: iso(20)}),
+    mk({n: 3, created: iso(200), labels: ['P0', 'bug']}),
+    mk({n: 4, state: 'closed', created: iso(9), closed: iso(2)}),
+  ]);
+  ok('open/closed split', d.open === 3 && d.closed === 1);
+  ok('age buckets land', JSON.stringify(d.age.map(a => a.n)) === '[1,1,0,1]');
+  ok('this week counts the close', d.weekly[d.weekly.length - 1].n +
+     d.weekly[d.weekly.length - 2].n === 1);
+  ok('weeks start Monday', d.weekly.every(x => x.w.getUTCDay() === 1));
+  ok('label tally is sorted', d.top.length === 2 && d.top[0].n >= d.top[1].n);
+  ok('priority label tagged', tag(mk({labels: ['P0']}), 'hi'));
+  ok('priority title tagged', tag(mk({title: '[HIGH] thing'}), 'hi'));
+  ok('plain title not tagged', !tag(mk({title: 'highlight the row'}), 'hi'));
+
+  const bad = out.filter(([, p]) => !p);
+  chrome(`<header><h1>Self check</h1><p class="sub">${bad.length ? bad.length + ' failing' : 'All ' + out.length + ' passing'}.</p></header>
+    <section class="card ${bad.length ? 'err' : ''}"><ul class="list">${out.map(([n, p]) =>
+      `<li><b style="color:var(${p ? '--good' : '--bad'})">${p ? 'PASS' : 'FAIL'}</b> &nbsp;${esc(n)}</li>`).join('')}</ul></section>`);
+}
+
+/* ---------- go ---------- */
+
+const BAKED = window.BOARD_DATA;
+
+if (P.has('selftest')) {
+  selftest();
+} else if (BAKED) {
+  document.title = BAKED.repo.split('/')[1] + ' Delivery Board';
+  board(BAKED.repo, summarise(BAKED.issues), BAKED.truncated, false, BAKED.at);
+} else if (!/^[\w.-]+\/[\w.-]+$/.test(REPO)) {
+  landing(REPO ? `"${REPO}" is not a repository. Use owner/name.` : '');
+} else {
+  document.title = REPO.split('/')[1] + ' Delivery Board';
+  chrome(`<header><h1>${esc(REPO.split('/')[1])} Delivery Board</h1>
+    <p class="sub">Reading issues from GitHub…</p></header>`);
+  load(REPO)
+    .then(d => board(REPO, summarise(d.issues), d.truncated, true, d.at))
+    .catch(e => landing(e.message));
+}
+</script>
+</body>
+</html>
