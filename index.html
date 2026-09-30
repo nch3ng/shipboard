@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Delivery Board</title>
+<title>Shipboard</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=DM+Sans:wght@400;500;700&display=swap">
@@ -107,11 +107,11 @@ pre{background:var(--canvas);border:1px solid var(--line);border-radius:var(--r-
 <!--BOARD_DATA-->
 
 <script>
-/* Delivery Board — a live GitHub issue dashboard in one static file.
+/* Shipboard — a live GitHub issue dashboard in one static file.
    No build, no backend, no dependencies: it reads the public Issues API
    from the browser. Point it at a repo with ?repo=owner/name. */
 
-const SOURCE = 'https://github.com/nch3ng/delivery-board';
+const SOURCE = 'https://github.com/nch3ng/shipboard';
 const API = 'https://api.github.com';
 const MAX_PAGES = 10;        // ponytail: 1000 most recent issues; raise it if you outgrow that
 const CACHE_MINUTES = 10;    // ponytail: keeps an embedded board off the 60 req/hr anon limit
@@ -253,7 +253,7 @@ function chrome(body) {
 function landing(message) {
   chrome(`
   <header>
-    <h1>Delivery Board</h1>
+    <h1>Shipboard</h1>
     <p class="sub">A live delivery dashboard for any public GitHub repo. One static file, no backend, no API key — embed it anywhere.</p>
   </header>
   ${message ? `<section class="card err"><p class="eyebrow">Could not load</p><p style="margin:0">${esc(message)}</p></section>` : ''}
@@ -281,7 +281,7 @@ function landing(message) {
 function showSnippet(repo) {
   const url = location.origin + location.pathname + '?repo=' + encodeURIComponent(repo);
   $('snippet').innerHTML = `<p class="note">Embed it:</p><pre>${esc(
-    `<iframe src="${url}" title="${repo} delivery board"\n        style="width:100%;height:1600px;border:0" loading="lazy"></iframe>`)}</pre>`;
+    `<iframe src="${url}" title="${repo} shipboard"\n        style="width:100%;height:1600px;border:0" loading="lazy"></iframe>`)}</pre>`;
 }
 
 function board(repo, d, truncated, live, at) {
@@ -302,7 +302,7 @@ function board(repo, d, truncated, live, at) {
 
   chrome(`
   <header>
-    <h1>${esc(repo.split('/')[1])} Delivery Board</h1>
+    <h1>${esc(repo.split('/')[1])} Shipboard</h1>
     <p class="sub">Every open and closed issue in
       <a href="https://github.com/${esc(repo)}" target="_blank" rel="noopener"><code>${esc(repo)}</code></a>,
       read ${live ? 'live from GitHub' : 'straight from GitHub'}.
@@ -371,7 +371,7 @@ function board(repo, d, truncated, live, at) {
   <footer>${truncated ? `Showing the ${MAX_PAGES * 100} most recent issues. ` : ''}${live
       ? `Live from the GitHub API, cached ${CACHE_MINUTES} minutes`
       : 'Static snapshot — rebuild it with the CLI'} —
-    built with <a href="${SOURCE}" target="_blank" rel="noopener">Delivery Board</a></footer>`);
+    built with <a href="${SOURCE}" target="_blank" rel="noopener">Shipboard</a></footer>`);
 }
 
 function chart(weekly) {
@@ -402,7 +402,7 @@ function chart(weekly) {
 /* Let a host page size the iframe instead of guessing. */
 function resized() {
   if (parent === window) return;
-  try { parent.postMessage({deliveryBoard: 'height', height: document.documentElement.scrollHeight}, '*'); } catch (e) {}
+  try { parent.postMessage({shipboard: 'height', height: document.documentElement.scrollHeight}, '*'); } catch (e) {}
 }
 addEventListener('resize', resized);
 
@@ -451,13 +451,13 @@ const BAKED = window.BOARD_DATA;
 if (P.has('selftest')) {
   selftest();
 } else if (BAKED) {
-  document.title = BAKED.repo.split('/')[1] + ' Delivery Board';
+  document.title = BAKED.repo.split('/')[1] + ' Shipboard';
   board(BAKED.repo, summarise(BAKED.issues), BAKED.truncated, false, BAKED.at);
 } else if (!/^[\w.-]+\/[\w.-]+$/.test(REPO)) {
   landing(REPO ? `"${REPO}" is not a repository. Use owner/name.` : '');
 } else {
-  document.title = REPO.split('/')[1] + ' Delivery Board';
-  chrome(`<header><h1>${esc(REPO.split('/')[1])} Delivery Board</h1>
+  document.title = REPO.split('/')[1] + ' Shipboard';
+  chrome(`<header><h1>${esc(REPO.split('/')[1])} Shipboard</h1>
     <p class="sub">Reading issues from GitHub…</p></header>`);
   load(REPO)
     .then(d => board(REPO, summarise(d.issues), d.truncated, true, d.at))

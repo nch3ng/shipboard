@@ -1,10 +1,10 @@
 #!/usr/bin/env node
-/* Delivery Board CLI — pull a repo's issues and bake them into a standalone HTML file.
+/* Shipboard CLI — pull a repo's issues and bake them into a standalone HTML file.
    Needs node 18+ for global fetch. No dependencies.
 
-     node board.js owner/name                 write board.html
-     node board.js owner/name -o out.html     write somewhere else
-     node board.js owner/name --serve         live at http://localhost:8080
+     node shipboard.js owner/name                 write shipboard.html
+     node shipboard.js owner/name -o out.html     write somewhere else
+     node shipboard.js owner/name --serve         live at http://localhost:8080
 
    Private repos: set GITHUB_TOKEN, or just be logged in with `gh auth login`.
    The token stays on your machine — it is never written into the output. */
@@ -18,12 +18,12 @@ const MAX_PAGES = 10;
 const TEMPLATE = path.join(__dirname, 'index.html');
 
 function usage(msg) {
-  console.error(`${msg ? msg + '\n\n' : ''}Usage: node board.js owner/name [-o out.html] [--serve] [--port 8080] [--refresh 600]`);
+  console.error(`${msg ? msg + '\n\n' : ''}Usage: node shipboard.js owner/name [-o out.html] [--serve] [--port 8080] [--refresh 600]`);
   process.exit(msg ? 1 : 0);
 }
 
 function parseArgs(argv) {
-  const o = {out: 'board.html', port: 8080, refresh: 600, serve: false};
+  const o = {out: 'shipboard.html', port: 8080, refresh: 600, serve: false};
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '-h' || a === '--help') usage();
@@ -52,7 +52,7 @@ function token() {
 }
 
 async function fetchIssues(repo, auth) {
-  const headers = {Accept: 'application/vnd.github+json', 'User-Agent': 'delivery-board'};
+  const headers = {Accept: 'application/vnd.github+json', 'User-Agent': 'shipboard'};
   if (auth) headers.Authorization = 'Bearer ' + auth;
 
   const issues = [];

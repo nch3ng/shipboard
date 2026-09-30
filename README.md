@@ -1,4 +1,4 @@
-# Delivery Board
+# Shipboard
 
 A delivery dashboard for any GitHub repo — pipeline, ageing backlog, weekly
 throughput, and what is dispatchable right now. One static HTML file and one
@@ -10,14 +10,14 @@ dependency-free Node script. No build step, no framework, no service to run.
 HTML file. Works on private repos. The result needs no network to open.
 
 ```bash
-node board.js owner/name -o board.html
+node shipboard.js owner/name -o shipboard.html
 ```
 
 **2 — Serve it live.** Same thing, re-fetched on a timer, at
 `http://localhost:8080`. This is the live view for a private repo.
 
 ```bash
-node board.js owner/name --serve
+node shipboard.js owner/name --serve
 ```
 
 **3 — Host `index.html` and pass a repo in the URL.** No CLI, no server. The
@@ -25,7 +25,7 @@ page reads the public GitHub API from the browser, so it is the one you can
 embed anywhere — and it only works on **public** repos.
 
 ```
-https://YOU.github.io/delivery-board/?repo=owner/name
+https://YOU.github.io/shipboard/?repo=owner/name
 ```
 
 Open it with no `?repo=` and it gives you a box to type one into.
@@ -52,7 +52,7 @@ private board.** That would mean shipping a token to every viewer. Generate a
 snapshot on a schedule and publish it somewhere access-controlled instead:
 
 ```bash
-node board.js owner/private-repo -o board.html   # then rsync/S3/commit it
+node shipboard.js owner/private-repo -o shipboard.html   # then rsync/S3/commit it
 ```
 
 The generated file contains issue numbers, titles, and labels. Treat it as
@@ -61,8 +61,8 @@ being as sensitive as the repo it came from.
 ## Embed it
 
 ```html
-<iframe src="https://YOU.github.io/delivery-board/?repo=owner/name"
-        title="delivery board" style="width:100%;height:1600px;border:0" loading="lazy"></iframe>
+<iframe src="https://YOU.github.io/shipboard/?repo=owner/name"
+        title="shipboard" style="width:100%;height:1600px;border:0" loading="lazy"></iframe>
 ```
 
 The page posts its height to the parent, so the frame can size itself instead
@@ -70,7 +70,7 @@ of guessing:
 
 ```js
 addEventListener('message', (e) => {
-  if (e.data?.deliveryBoard === 'height') frame.style.height = e.data.height + 'px';
+  if (e.data?.shipboard === 'height') frame.style.height = e.data.height + 'px';
 });
 ```
 
@@ -117,7 +117,7 @@ title for priority — `P0`, `[HIGH]`, `critical`, `bug`, `security` and friends
 ## Options
 
 ```
-node board.js owner/name [-o out.html] [--serve] [--port 8080] [--refresh 600]
+node shipboard.js owner/name [-o out.html] [--serve] [--port 8080] [--refresh 600]
 ```
 
 `--refresh` is the server's re-fetch interval in seconds; `?refresh` on the URL
