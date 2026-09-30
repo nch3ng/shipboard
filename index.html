@@ -107,14 +107,14 @@ pre{background:var(--canvas);border:1px solid var(--line);border-radius:var(--r-
 <!--BOARD_DATA-->
 
 <script>
-/* Shipboard — a live GitHub issue dashboard in one static file.
-   No build, no backend, no dependencies: it reads the public Issues API
-   from the browser. Point it at a repo with ?repo=owner/name. */
+/* Shipboard: a GitHub issue dashboard in one static file.
+   Renders window.BOARD_DATA if the CLI baked it in, otherwise reads the
+   public Issues API from the browser. Point it at a repo with ?repo=owner/name. */
 
 const SOURCE = 'https://github.com/nch3ng/shipboard';
 const API = 'https://api.github.com';
-const MAX_PAGES = 10;        // ponytail: 1000 most recent issues; raise it if you outgrow that
-const CACHE_MINUTES = 10;    // ponytail: keeps an embedded board off the 60 req/hr anon limit
+const MAX_PAGES = 10;        // 1000 most recent issues
+const CACHE_MINUTES = 10;    // anonymous API budget is 60 requests/hour
 const WEEKS = 19;
 
 const P = new URLSearchParams(location.search);
