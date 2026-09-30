@@ -6,6 +6,17 @@ much is closing each week, and what's ready to pick up next.
 One static HTML file and one Node script. No dependencies, no build, no server
 to run.
 
+## Demo
+
+[A live board for `prettier/prettier`](https://nch3ng.github.io/shipboard/?repo=prettier/prettier),
+or the same thing as a picture:
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/demo-dark.png">
+  <img src="docs/demo-light.png"
+       alt="Shipboard for prettier/prettier: 1169 open issues, 18 ready to dispatch, 12 in flight, 6198 closed, with a pipeline breakdown, backlog age bands, and issues closed per week.">
+</picture>
+
 ## Quick start
 
 Public repo, no install:
@@ -131,17 +142,27 @@ to the URL forces one.
 
 ## Limits
 
-* **1000 issues**, most recent first. Past that the board says so and the
-  closed count gets a `+`. Raise `MAX_PAGES` in both files to go further.
-* **API rate limits.** 60 requests per hour without a token, 5000 with one, at
-  one request per 100 issues. The browser version caches for 10 minutes.
+* **The four headline counts are exact.** They come from the search API, so
+  they are right even for a repo with 10,000 issues.
+* **The panels below them read up to 1000 open issues**, most recently created
+  first. Past that the footer says so. Raise `MAX_PAGES` in both files to go
+  further.
+* **Closed issues are fetched for the chart window only**, currently 19 weeks.
+* **API rate limits.** 60 requests per hour without a token, 5000 with one. A
+  board costs one request per 100 open issues plus two or three searches. The
+  browser version caches for 10 minutes.
 * **Labels, not categories.** The "where the open work sits" panel shows your
   six most-used labels. Nothing is inferred from issue text.
 
 ## Tests
 
-Open `index.html?selftest=1`. It runs the bucketing, ageing, and week-binning
-assertions in the page and lists what passed.
+Two checks, no framework and nothing to install:
+
+```bash
+open 'index.html?selftest=1'    # bucketing, ageing, week binning, counts
+node shipboard.js --selftest    # HTML templating, which has to survive
+                                # $& and </script> inside issue titles
+```
 
 ## License
 

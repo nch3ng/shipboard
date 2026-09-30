@@ -88,6 +88,10 @@ a.iss:focus-visible{outline:2px solid var(--sky);outline-offset:3px;border-radiu
 .tag.age{color:var(--ink-3);border-color:var(--line)}
 footer{color:var(--ink-3);font-size:12.5px;text-align:center;margin-top:8px}
 footer a{color:var(--ink-2)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.skel{background:var(--line-soft);border-radius:var(--r-xs);animation:pulse 1.4s ease-in-out infinite}
+.stat .skel,.card .skel{animation-delay:calc(var(--i,0) * .12s)}
+@media (prefers-reduced-motion:reduce){.skel{animation:none}}
 form{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
 input[type=text]{flex:1 1 240px;min-width:0;font:inherit;padding:10px 13px;border-radius:var(--r-sm);
   border:1px solid var(--line);background:var(--canvas);color:var(--ink)}
@@ -113,7 +117,8 @@ pre{background:var(--canvas);border:1px solid var(--line);border-radius:var(--r-
 
 const SOURCE = 'https://github.com/nch3ng/shipboard';
 const API = 'https://api.github.com';
-const MAX_PAGES = 10;        // 1000 most recent issues
+const MAX_PAGES = 10;        // up to 1000 open issues
+const CLOSED_PAGES = 3;      // recent closures, for the throughput chart
 const CACHE_MINUTES = 10;    // anonymous API budget is 60 requests/hour
 const WEEKS = 19;
 
@@ -144,31 +149,97 @@ const days = (iso) => Math.floor((Date.now() - Date.parse(iso)) / 86400000);
 
 /* ---------- data ---------- */
 
-async function load(repo) {
-  const key = 'db:' + repo + ':' + MAX_PAGES;
+async function counts(repo) {
+  const one = async (extra) => {
+    const q = encodeURIComponent(`repo:${repo} is:issue ${extra}`);
+    const r = await fetch(`${API}/search/issues?q=${q}&per_page=1`, {headers: {Accept: 'application/vnd.github+json'}});
+    if (!r.ok) throw new Error('search unavailable');
+    return (await r.json()).total_count;
+  };
+  // Search has a tighter rate limit than the rest of the API; falling back to
+  // the sample counts is better than failing the whole board.
+  try {
+    const [open, closed] = await Promise.all([one('is:open'), one('is:closed')]);
+    return {open, closed};
+  } catch (e) { return null; }
+}
+
+/* Closed issues inside the chart window, exactly. Search returns issues only,
+   so this costs ~2 requests where paging the list endpoint costs a dozen. */
+async function closedSince(repo, since, shape) {
+  const out = [];
+  let capped = false;
+  const q = encodeURIComponent(`repo:${repo} is:issue is:closed closed:>=${since}`);
+  for (let p = 1; p <= 10; p++) {
+    const r = await fetch(`${API}/search/issues?q=${q}&per_page=100&page=${p}&sort=updated&order=desc`,
+      {headers: {Accept: 'application/vnd.github+json'}});
+    if (!r.ok) throw new Error('search unavailable');
+    const j = await r.json();
+    out.push(...j.items.map(shape));
+    if (j.items.length < 100 || out.length >= j.total_count) break;
+    if (p === 10) capped = true;   // search tops out at 1000 results
+  }
+  return {out, capped};
+}
+
+const windowStart = () => {
+  const m = mondayOf(new Date());
+  m.setUTCDate(m.getUTCDate() - (WEEKS - 1) * 7);
+  return m;
+};
+
+async function load(repo, onProgress) {
+  const key = 'shipboard:3:' + repo + ':' + MAX_PAGES;   // bump when the cached shape changes
   try {
     const hit = JSON.parse(localStorage.getItem(key) || 'null');
     if (hit && Date.now() - hit.at < CACHE_MINUTES * 60000) return hit;
   } catch (e) { /* private mode, no cache */ }
 
-  const issues = [];
-  let truncated = false;
-  for (let page = 1; page <= MAX_PAGES; page++) {
-    const url = `${API}/repos/${repo}/issues?state=all&per_page=100&page=${page}&sort=created&direction=desc`;
-    const res = await fetch(url, {headers: {Accept: 'application/vnd.github+json'}});
-    if (!res.ok) throw await describe(res, repo);
-    const batch = await res.json();
-    issues.push(...batch.filter(i => !i.pull_request));  // the endpoint returns PRs too
-    if (batch.length < 100) break;
-    if (page === MAX_PAGES) truncated = true;
-  }
-
-  const data = {at: Date.now(), repo, truncated, issues: issues.map(i => ({
+  const totalsPending = counts(repo);
+  const shape = (i) => ({
     n: i.number, title: i.title, state: i.state,
-    created: i.created_at, closed: i.closed_at,
+    created: i.created_at, closed: i.closed_at, updated: i.updated_at,
     assigned: !!i.assignee,
     labels: i.labels.map(l => typeof l === 'string' ? l : l.name),
-  }))};
+  });
+
+  // Two passes, because this endpoint mixes in pull requests. Asking for
+  // state=all spends the whole page budget on PRs we then throw away, which on
+  // a PR-heavy repo leaves almost no issues behind.
+  const grab = async (state, sort, pages, tick) => {
+    const out = [];
+    let full = false;
+    for (let p = 1; p <= pages; p++) {
+      const url = `${API}/repos/${repo}/issues?state=${state}&per_page=100&page=${p}&sort=${sort}&direction=desc`;
+      const res = await fetch(url, {headers: {Accept: 'application/vnd.github+json'}});
+      if (!res.ok) throw await describe(res, repo);
+      const batch = await res.json();
+      out.push(...batch.filter(i => !i.pull_request).map(shape));
+      if (tick) tick(out.length);
+      if (batch.length < 100) break;
+      if (p === pages) full = true;
+    }
+    return {out, full};
+  };
+
+  const open = await grab('open', 'created', MAX_PAGES, onProgress);
+
+  // Sorted by updated descending, anything closed after the oldest updated_at in
+  // the sample is certainly in it. Older weeks are not, so we do not chart them.
+  const oldest = (rows) => Math.min(...rows.map(i => Date.parse(i.updated)));
+  let closed, closedFrom = null;
+  try {
+    const found = await closedSince(repo, windowStart().toISOString().slice(0, 10), shape);
+    closed = found.out;
+    if (found.capped) closedFrom = oldest(closed);
+  } catch (e) {
+    const fallback = await grab('closed', 'updated', CLOSED_PAGES);   // search is rate-limited separately
+    closed = fallback.out;
+    if (fallback.full) closedFrom = oldest(closed);
+  }
+
+  const data = {at: Date.now(), repo, truncated: open.full, closedFrom,
+    totals: await totalsPending, issues: open.out.concat(closed)};
   try { localStorage.setItem(key, JSON.stringify(data)); } catch (e) {}
   return data;
 }
@@ -200,7 +271,7 @@ const mondayOf = (d) => {
   return t;
 };
 
-function summarise(issues) {
+function summarise(issues, totals, closedFrom) {
   const open = issues.filter(i => i.state === 'open');
   const closed = issues.filter(i => i.state === 'closed');
 
@@ -215,6 +286,7 @@ function summarise(issues) {
   for (let w = WEEKS - 1; w >= 0; w--) {
     const from = new Date(start); from.setUTCDate(from.getUTCDate() - w * 7);
     const to = new Date(from); to.setUTCDate(to.getUTCDate() + 7);
+    if (closedFrom && from.getTime() < closedFrom) continue;   // outside what we sampled
     weekly.push({w: from, n: closed.filter(i => i.closed &&
       Date.parse(i.closed) >= from && Date.parse(i.closed) < to).length});
   }
@@ -232,7 +304,10 @@ function summarise(issues) {
   const flight = open.filter(i => bucket(i) === 'In flight')
     .sort((a, b) => days(b.created) - days(a.created)).slice(0, 10);
 
-  return {open: open.length, closed: closed.length, counts, age, weekly, top, ready, flight};
+  return {open: open.length, closed: closed.length, counts, age, weekly, top, ready, flight,
+    totalOpen: totals ? totals.open : open.length,
+    totalClosed: totals ? totals.closed : closed.length,
+    partial: !!totals && totals.open > open.length};
 }
 
 const PATTERNS = {
@@ -248,6 +323,25 @@ const tag = (i, kind) => i.labels.some(n => PATTERNS[kind].test(n)) ||
 function chrome(body) {
   $('app').innerHTML = body;
   resized();
+}
+
+function skeleton(repo) {
+  const blk = (h, w = '100%', i = 0) => `<div class="skel" style="height:${h}px;width:${w};--i:${i}"></div>`;
+  const gap = (h) => `<div style="height:${h}px"></div>`;
+  const rows = [72, 94, 38, 60].map((w, i) =>
+    `<div class="row">${blk(11, '62%', i)}<div class="track">${blk(16, w + '%', i)}</div>${blk(11, '80%', i)}</div>`).join('');
+  return `
+  <header>
+    <h1>${esc(repo.split('/')[1])} Shipboard</h1>
+    <p class="sub" id="loadnote">Reading issues from GitHub…</p>
+  </header>
+  <section class="stats">${[0, 1, 2, 3].map(i =>
+    `<div class="stat">${blk(31, '56%', i)}${gap(9)}${blk(11, '78%', i)}</div>`).join('')}</section>
+  <div class="grid2">
+    <section class="card">${blk(10, '28%')}${gap(15)}${blk(34)}${gap(16)}${blk(10, '72%', 1)}</section>
+    <section class="card">${blk(10, '44%')}${gap(15)}<div class="rows">${rows}</div></section>
+  </div>
+  <section class="card">${blk(10, '24%')}${gap(15)}${blk(196, '100%', 1)}</section>`;
 }
 
 function landing(message) {
@@ -310,10 +404,10 @@ function board(repo, d, truncated, live, at) {
   </header>
 
   <section class="stats">${[
-    ['Open issues', d.open, ''],
+    ['Open issues', d.totalOpen, ''],
     ['Ready to dispatch', d.counts['Ready'], 'accent'],
     ['In flight now', d.counts['In flight'], ''],
-    ['Closed to date', d.closed + (truncated ? '+' : ''), ''],
+    ['Closed to date', d.totalClosed, ''],
   ].map(([l, n, c]) => `<div class="stat ${c}"><div class="n">${n}</div><div class="l">${l}</div></div>`).join('')}</section>
 
   <div class="grid2">
@@ -368,7 +462,9 @@ function board(repo, d, truncated, live, at) {
     </section>
   </div>
 
-  <footer>${truncated ? `Showing the ${MAX_PAGES * 100} most recent issues. ` : ''}${live
+  <footer>${d.partial
+      ? `Counts are exact. The panels above read the ${d.open} most recently created open issues. `
+      : truncated ? `Showing the ${MAX_PAGES * 100} most recent issues. ` : ''}${live
       ? `Live from the GitHub API, cached ${CACHE_MINUTES} minutes`
       : 'Static snapshot — rebuild it with the CLI'} —
     built with <a href="${SOURCE}" target="_blank" rel="noopener">Shipboard</a></footer>`);
@@ -429,10 +525,18 @@ function selftest() {
     mk({n: 4, state: 'closed', created: iso(9), closed: iso(2)}),
   ]);
   ok('open/closed split', d.open === 3 && d.closed === 1);
+  ok('totals fall back to the sample', d.totalOpen === 3 && d.totalClosed === 1 && !d.partial);
+  const withTotals = summarise([mk({n: 1})], {open: 600, closed: 900});
+  ok('totals override the sample', withTotals.totalOpen === 600 && withTotals.partial);
   ok('age buckets land', JSON.stringify(d.age.map(a => a.n)) === '[1,1,0,1]');
   ok('this week counts the close', d.weekly[d.weekly.length - 1].n +
      d.weekly[d.weekly.length - 2].n === 1);
   ok('weeks start Monday', d.weekly.every(x => x.w.getUTCDay() === 1));
+  const cutoff = Date.now() - 21 * 86400000;
+  const clipped = summarise([mk({n: 5, state: 'closed', created: iso(300), closed: iso(2)})], null, cutoff);
+  ok('uncovered weeks are not charted',
+     clipped.weekly.length > 0 && clipped.weekly.length < WEEKS &&
+     clipped.weekly.every(x => x.w.getTime() >= cutoff));
   ok('label tally is sorted', d.top.length === 2 && d.top[0].n >= d.top[1].n);
   ok('priority label tagged', tag(mk({labels: ['P0']}), 'hi'));
   ok('priority title tagged', tag(mk({title: '[HIGH] thing'}), 'hi'));
@@ -452,15 +556,17 @@ if (P.has('selftest')) {
   selftest();
 } else if (BAKED) {
   document.title = BAKED.repo.split('/')[1] + ' Shipboard';
-  board(BAKED.repo, summarise(BAKED.issues), BAKED.truncated, false, BAKED.at);
+  board(BAKED.repo, summarise(BAKED.issues, BAKED.totals, BAKED.closedFrom), BAKED.truncated, false, BAKED.at);
 } else if (!/^[\w.-]+\/[\w.-]+$/.test(REPO)) {
   landing(REPO ? `"${REPO}" is not a repository. Use owner/name.` : '');
 } else {
   document.title = REPO.split('/')[1] + ' Shipboard';
-  chrome(`<header><h1>${esc(REPO.split('/')[1])} Shipboard</h1>
-    <p class="sub">Reading issues from GitHub…</p></header>`);
-  load(REPO)
-    .then(d => board(REPO, summarise(d.issues), d.truncated, true, d.at))
+  chrome(skeleton(REPO));
+  load(REPO, (n) => {
+    const note = $('loadnote');
+    if (note) note.textContent = `Reading issues from GitHub… ${n} so far`;
+  })
+    .then(d => board(REPO, summarise(d.issues, d.totals, d.closedFrom), d.truncated, true, d.at))
     .catch(e => landing(e.message));
 }
 </script>
