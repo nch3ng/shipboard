@@ -25,7 +25,7 @@ page reads the public GitHub API from the browser, so it is the one you can
 embed anywhere — and it only works on **public** repos.
 
 ```
-https://YOU.github.io/shipboard/?repo=owner/name
+https://nch3ng.github.io/shipboard/?repo=owner/name
 ```
 
 Open it with no `?repo=` and it gives you a box to type one into.
@@ -61,7 +61,7 @@ being as sensitive as the repo it came from.
 ## Embed it
 
 ```html
-<iframe src="https://YOU.github.io/shipboard/?repo=owner/name"
+<iframe src="https://nch3ng.github.io/shipboard/?repo=owner/name"
         title="shipboard" style="width:100%;height:1600px;border:0" loading="lazy"></iframe>
 ```
 
@@ -78,7 +78,8 @@ Generated files (mode 1) embed the same way — they are ordinary HTML.
 
 ## Host it
 
-Fork, then Settings → Pages → deploy from `main` / root. There is nothing to
+There is a hosted copy at `https://nch3ng.github.io/shipboard/` — point it at
+any public repo and use it as-is. To run your own: fork, then Settings → Pages → deploy from `main` / root. There is nothing to
 build. Opening `index.html` off the filesystem works too.
 
 ## Buckets
